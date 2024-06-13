@@ -19,6 +19,13 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// cookie
+const cookieOption = {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  secure: process.env.NODE_ENV === "production" ? true : false,
+};
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.b6wqjn1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -37,6 +44,15 @@ async function run() {
     // Connect to the "empoweru" database
     const empowerU = client.db("empowerU");
     const scholarshipCollection = empowerU.collection("scholarships");
+
+    // jwt api
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.Access_Token_Secret, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
   } finally {
     //   catch (e) {
     //     console.log(e);
