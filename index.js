@@ -69,18 +69,31 @@ async function run() {
       res.send({ token });
 
       //users api
-      //verify admin
-      app.get("/admin/verify/:uid", verifyToken, async (req, res) => {
+      //verify user role
+      app.get("/role/verify/:uid", verifyToken, async (req, res) => {
         const uid = req.params.uid;
         if (uid !== req.decoded.uid)
           return res.status(403).send({ message: "Forbidden Access" });
+        const verifyRole = req.query.role;
         let role = false;
         const query = { uid: uid };
         const options = { projection: { _id: 0, role: 1 } };
         const result = await userCollection.findOne(query, options);
-        if (result?.role === "admin") role = true;
+        if (result?.role === verifyRole) role = true;
         res.send({ role });
       });
+    });
+    //verify mod
+    app.get("/mod/verify/:uid", verifyToken, async (req, res) => {
+      const uid = req.params.uid;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      let role = false;
+      const query = { uid: uid };
+      const options = { projection: { _id: 0, role: 1 } };
+      const result = await userCollection.findOne(query, options);
+      if (result?.role === "moderator") role = true;
+      res.send({ role });
     });
   } finally {
     //   catch (e) {
