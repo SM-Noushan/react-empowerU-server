@@ -41,9 +41,24 @@ async function run() {
   try {
     console.log("Successfully connected to MongoDB!");
 
+    // middleware
+    // verify token
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization)
+        return res.status(401).send({ message: "Unauthorized Access" });
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(token, process.env.Access_Token_Secret, (err, decoded) => {
+        if (err)
+          return res.status(401).send({ message: "Unauthorized Access" });
+        req.decoded = decoded;
+        next();
+      });
+    };
+
     // Connect to the "empoweru" database
     const empowerU = client.db("empowerU");
     const scholarshipCollection = empowerU.collection("scholarships");
+    const userCollection = empowerU.collection("users");
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -52,6 +67,20 @@ async function run() {
         expiresIn: "1h",
       });
       res.send({ token });
+
+      //users api
+      //verify admin
+      app.get("/admin/verify/:uid", verifyToken, async (req, res) => {
+        const uid = req.params.uid;
+        if (uid !== req.decoded.uid)
+          return res.status(403).send({ message: "Forbidden Access" });
+        let role = false;
+        const query = { uid: uid };
+        const options = { projection: { _id: 0, role: 1 } };
+        const result = await userCollection.findOne(query, options);
+        if (result?.role === "admin") role = true;
+        res.send({ role });
+      });
     });
   } finally {
     //   catch (e) {
