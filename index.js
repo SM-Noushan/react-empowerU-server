@@ -41,6 +41,11 @@ async function run() {
   try {
     console.log("Successfully connected to MongoDB!");
 
+    // Connect to the "empoweru" database
+    const empowerU = client.db("empowerU");
+    const scholarshipCollection = empowerU.collection("scholarships");
+    const userCollection = empowerU.collection("users");
+
     // middleware
     // verify token
     const verifyToken = (req, res, next) => {
@@ -55,10 +60,18 @@ async function run() {
       });
     };
 
-    // Connect to the "empoweru" database
-    const empowerU = client.db("empowerU");
-    const scholarshipCollection = empowerU.collection("scholarships");
-    const userCollection = empowerU.collection("users");
+    // verify admin or mod after verify token
+    const verifyAdminOrMod = async (req, res, next) => {
+      const uid = req.decoded.uid;
+      let isAdminOrMod = false;
+      const query = { uid: uid };
+      const result = await userCollection.findOne(query);
+      if (result?.role === "admin" || result?.role === "moderator")
+        isAdminOrMod = true;
+      if (!isAdminOrMod)
+        return res.status(403).send({ message: "Forbidden Access" });
+      next();
+    };
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -67,34 +80,36 @@ async function run() {
         expiresIn: "1h",
       });
       res.send({ token });
-
-      //users api
-      //verify user role
-      app.get("/role/verify/:uid", verifyToken, async (req, res) => {
-        const uid = req.params.uid;
-        if (uid !== req.decoded.uid)
-          return res.status(403).send({ message: "Forbidden Access" });
-        const verifyRole = req.query.role;
-        let role = false;
-        const query = { uid: uid };
-        const options = { projection: { _id: 0, role: 1 } };
-        const result = await userCollection.findOne(query, options);
-        if (result?.role === verifyRole) role = true;
-        res.send({ role });
-      });
     });
-    //verify mod
-    app.get("/mod/verify/:uid", verifyToken, async (req, res) => {
+
+    //users api
+    //verify admin or mod role
+    app.get("/role/verify/:uid", verifyToken, async (req, res) => {
       const uid = req.params.uid;
       if (uid !== req.decoded.uid)
         return res.status(403).send({ message: "Forbidden Access" });
+      const verifyRole = req.query.role;
       let role = false;
       const query = { uid: uid };
       const options = { projection: { _id: 0, role: 1 } };
       const result = await userCollection.findOne(query, options);
-      if (result?.role === "moderator") role = true;
+      if (result?.role === verifyRole) role = true;
       res.send({ role });
     });
+
+    // scholarships api
+    //store user data
+    app.post(
+      "/adminOrMod/scholarship",
+      verifyToken,
+      verifyAdminOrMod,
+      async (req, res) => {
+        const scholarshipData = req.body;
+        console.log(scholarshipData);
+        const result = await scholarshipCollection.insertOne(scholarshipData);
+        res.send(result);
+      }
+    );
   } finally {
     //   catch (e) {
     //     console.log(e);
