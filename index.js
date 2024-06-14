@@ -98,22 +98,32 @@ async function run() {
     });
 
     // scholarships api
-    // get all scholarship
-    // get all data
+    const scholarshipProjectionShared = {
+      postedUserName: 0,
+      postedUserEmail: 0,
+      postedUserUID: 0,
+    };
+    // get all scholarship data
     app.get("/scholarships", async (req, res) => {
       const options = {
-        projection: {
-          postedUserName: 0,
-          postedUserEmail: 0,
-          postedUserUID: 0,
-          scholarshipPostDate: 0,
-        },
+        projection: scholarshipProjectionShared,
       };
       const result = await scholarshipCollection.find({}, options).toArray();
       res.send(result);
     });
 
-    //store user data
+    // get specific scholarship data
+    app.get("/scholarship/:id", async (req, res) => {
+      const id = req?.params.id;
+      const query = { _id: new ObjectId(id) };
+      const options = {
+        projection: scholarshipProjectionShared,
+      };
+      const result = await scholarshipCollection.findOne(query, options);
+      res.send(result);
+    });
+
+    //store scholarship data
     app.post(
       "/adminOrMod/scholarship",
       verifyToken,
