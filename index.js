@@ -98,6 +98,21 @@ async function run() {
     });
 
     // scholarships api
+    // get all scholarship
+    // get all data
+    app.get("/scholarships", async (req, res) => {
+      const options = {
+        projection: {
+          postedUserName: 0,
+          postedUserEmail: 0,
+          postedUserUID: 0,
+          scholarshipPostDate: 0,
+        },
+      };
+      const result = await scholarshipCollection.find({}, options).toArray();
+      res.send(result);
+    });
+
     //store user data
     app.post(
       "/adminOrMod/scholarship",
@@ -105,7 +120,6 @@ async function run() {
       verifyAdminOrMod,
       async (req, res) => {
         const scholarshipData = req.body;
-        console.log(scholarshipData);
         const result = await scholarshipCollection.insertOne(scholarshipData);
         res.send(result);
       }
