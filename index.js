@@ -138,8 +138,60 @@ async function run() {
         res.send(result);
       }
     );
+
+    // applied scholarships api
+    // get applied scholarships
+    app.get("/appliedScholarships/:id", verifyToken, async (req, res) => {
+      const uid = req?.params.id;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      const query = { uid };
+      const result = await appliedScholarshipCollection
+        .aggregate([
+          {
+            $match: {
+              userUID: uid,
+            },
+          },
+          {
+            $lookup: {
+              from: "scholarships",
+              localField: "scholarshipId",
+              foreignField: "_id",
+              as: "additionalDetails",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 0,
+                    universityCity: 1,
+                    universityCountry: 1,
+                    applicationFee: 1,
+                    serviceCharge: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $unwind: "$additionalDetails",
+          },
+          {
+            $project: {
+              additionalDetails: 1,
+              universityName: 1,
+              feedback: 1,
+              subjectCategory: 1,
+              applicantDegree: 1,
+              scholarshipId: 1,
+              status: 1,
+            },
+          },
+        ])
+        .toArray();
+      res.send(result);
+    });
     //store applied scholarship data
-    app.post("/applied-scholarships", verifyToken, async (req, res) => {
+    app.post("/appliedScholarships", verifyToken, async (req, res) => {
       const data = req.body;
       data.scholarshipId = new ObjectId(data.scholarshipId);
       data.ssc = parseFloat(data.ssc);
