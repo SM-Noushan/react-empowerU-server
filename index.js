@@ -151,6 +151,9 @@ async function run() {
           {
             $match: {
               userUID: uid,
+              $expr: {
+                $ne: [{ $toLower: "$cancelledByUser" }, "true"],
+              },
             },
           },
           {
@@ -205,6 +208,19 @@ async function run() {
       const result = await appliedScholarshipCollection.updateOne(
         filter,
         updateQuery
+      );
+      res.send(result);
+    });
+
+    // cancel scholarship application
+    app.delete("/appliedScholarships/:id", verifyToken, async (req, res) => {
+      const uid = req?.query.uid;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      const id = req.params.id;
+      const result = await appliedScholarshipCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { cancelledByUser: "true" } }
       );
       res.send(result);
     });
