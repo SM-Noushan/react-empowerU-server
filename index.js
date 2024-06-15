@@ -175,21 +175,11 @@ async function run() {
           {
             $unwind: "$additionalDetails",
           },
-          {
-            $project: {
-              additionalDetails: 1,
-              universityName: 1,
-              feedback: 1,
-              subjectCategory: 1,
-              applicantDegree: 1,
-              scholarshipId: 1,
-              status: 1,
-            },
-          },
         ])
         .toArray();
       res.send(result);
     });
+
     //store applied scholarship data
     app.post("/appliedScholarships", verifyToken, async (req, res) => {
       const data = req.body;
@@ -198,6 +188,24 @@ async function run() {
       data.hsc = parseFloat(data.hsc);
       // console.log(data);
       const result = await appliedScholarshipCollection.insertOne(data);
+      res.send(result);
+    });
+
+    // update applied scholarship data
+    app.patch("/appliedScholarships/:id", verifyToken, async (req, res) => {
+      const uid = req?.query.uid;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedData = req.body;
+      const updateQuery = {
+        $set: updatedData,
+      };
+      const result = await appliedScholarshipCollection.updateOne(
+        filter,
+        updateQuery
+      );
       res.send(result);
     });
 
