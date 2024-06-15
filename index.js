@@ -44,7 +44,11 @@ async function run() {
     // Connect to the "empoweru" database
     const empowerU = client.db("empowerU");
     const scholarshipCollection = empowerU.collection("scholarships");
+    const paymentCollection = empowerU.collection("payments");
     const userCollection = empowerU.collection("users");
+    const appliedScholarshipCollection = empowerU.collection(
+      "appliedScholarships"
+    );
 
     // middleware
     // verify token
@@ -134,6 +138,42 @@ async function run() {
         res.send(result);
       }
     );
+    //store applied scholarship data
+    app.post("/applied-scholarships", verifyToken, async (req, res) => {
+      const data = req.body;
+      data.scholarshipId = new ObjectId(data.scholarshipId);
+      data.ssc = parseFloat(data.ssc);
+      data.hsc = parseFloat(data.hsc);
+      // console.log(data);
+      const result = await appliedScholarshipCollection.insertOne(data);
+      res.send(result);
+    });
+
+    // payment apis
+    // payment intent
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    // store payment details
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      payment.scholarshipId = new ObjectId(payment.scholarshipId);
+      const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
   } finally {
     //   catch (e) {
     //     console.log(e);
