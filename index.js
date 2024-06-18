@@ -45,6 +45,7 @@ async function run() {
     const empowerU = client.db("empowerU");
     const scholarshipCollection = empowerU.collection("scholarships");
     const paymentCollection = empowerU.collection("payments");
+    const reviewCollection = empowerU.collection("reviews");
     const userCollection = empowerU.collection("users");
     const appliedScholarshipCollection = empowerU.collection(
       "appliedScholarships"
@@ -178,6 +179,30 @@ async function run() {
           {
             $unwind: "$additionalDetails",
           },
+          {
+            $lookup: {
+              from: "reviews",
+              localField: "scholarshipId",
+              foreignField: "scholarshipId",
+              as: "review",
+            },
+          },
+          {
+            $addFields: {
+              reviewStatus: {
+                $cond: {
+                  if: { $gt: [{ $size: "$review" }, 0] },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              review: 0,
+            },
+          },
         ])
         .toArray();
       res.send(result);
@@ -222,6 +247,16 @@ async function run() {
         { _id: new ObjectId(id) },
         { $set: { cancelledByUser: "true" } }
       );
+      res.send(result);
+    });
+
+    // rating apis
+    // store rating details
+    app.post("/reviews", verifyToken, async (req, res) => {
+      const data = req.body;
+      data.scholarshipId = new ObjectId(data.scholarshipId);
+      // console.log(data);
+      const result = await reviewCollection.insertOne(data);
       res.send(result);
     });
 
