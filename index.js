@@ -307,7 +307,52 @@ async function run() {
       res.send(result);
     });
 
-    // rating apis
+    // reviews apis
+    // get my reviews
+    app.get("/reviews/:id", verifyToken, async (req, res) => {
+      const uid = req?.params.id;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      const result = await reviewCollection
+        .aggregate([
+          {
+            $match: {
+              userUID: uid,
+            },
+          },
+          {
+            $lookup: {
+              from: "scholarships",
+              localField: "scholarshipId",
+              foreignField: "_id",
+              as: "scholarshipDetails",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 0,
+                    scholarshipName: 1,
+                    universityName: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $unwind: "$scholarshipDetails",
+          },
+          {
+            $project: {
+              rating: 1,
+              reviewMessage: 1,
+              reviewDate: 1,
+              scholarshipDetails: 1,
+            },
+          },
+        ])
+        .toArray();
+      res.send(result);
+    });
+
     // store rating details
     app.post("/reviews", verifyToken, async (req, res) => {
       const data = req.body;
