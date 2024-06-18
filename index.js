@@ -362,6 +362,18 @@ async function run() {
       res.send(result);
     });
 
+    // delete review
+    app.delete("/reviews/:id", verifyToken, async (req, res) => {
+      const uid = req?.query.uid;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      const id = req.params.id;
+      const result = await reviewCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+      res.send(result);
+    });
+
     // payment apis
     // payment intent
     app.post("/create-payment-intent", verifyToken, async (req, res) => {
