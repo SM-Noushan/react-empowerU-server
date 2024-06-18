@@ -113,7 +113,29 @@ async function run() {
       const options = {
         projection: scholarshipProjectionShared,
       };
-      const result = await scholarshipCollection.find({}, options).toArray();
+      const result = await scholarshipCollection
+        .aggregate([
+          {
+            $lookup: {
+              from: "reviews",
+              localField: "_id",
+              foreignField: "scholarshipId",
+              as: "reviews",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 0,
+                    rating: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $project: scholarshipProjectionShared,
+          },
+        ])
+        .toArray();
       res.send(result);
     });
 
@@ -121,11 +143,25 @@ async function run() {
     app.get("/scholarship/:id", async (req, res) => {
       const id = req?.params.id;
       const query = { _id: new ObjectId(id) };
-      const options = {
-        projection: scholarshipProjectionShared,
-      };
-      const result = await scholarshipCollection.findOne(query, options);
-      res.send(result);
+      const result = await scholarshipCollection
+        .aggregate([
+          {
+            $match: query,
+          },
+          {
+            $project: scholarshipProjectionShared,
+          },
+          {
+            $lookup: {
+              from: "reviews",
+              localField: "_id",
+              foreignField: "scholarshipId",
+              as: "reviews",
+            },
+          },
+        ])
+        .toArray();
+      res.send(result[0]);
     });
 
     //store scholarship data
@@ -146,7 +182,6 @@ async function run() {
       const uid = req?.params.id;
       if (uid !== req.decoded.uid)
         return res.status(403).send({ message: "Forbidden Access" });
-      const query = { uid };
       const result = await appliedScholarshipCollection
         .aggregate([
           {
@@ -207,6 +242,28 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
+    // get apply status
+    app.get(
+      "/appliedScholarships/applyStatus/:id",
+      verifyToken,
+      async (req, res) => {
+        const uid = req.decoded.uid;
+        const scholarshipId = req?.params.id;
+        // console.log(new ObjectId(scholarshipId), uid);
+        const query = {
+          userUID: uid,
+          scholarshipId: new ObjectId(scholarshipId),
+          $or: [
+            { cancelledByUser: { $exists: false } },
+            { cancelledByUser: { $not: { $regex: /^true$/i } } },
+          ],
+        };
+
+        const result = await appliedScholarshipCollection.countDocuments(query);
+        res.send({ result: result });
+      }
+    );
 
     //store applied scholarship data
     app.post("/appliedScholarships", verifyToken, async (req, res) => {
