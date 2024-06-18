@@ -362,6 +362,22 @@ async function run() {
       res.send(result);
     });
 
+    // update review
+    app.patch("/reviews/:id", verifyToken, async (req, res) => {
+      const uid = req?.query.uid;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedData = req.body;
+      const updateQuery = {
+        $set: updatedData,
+      };
+      // console.log(updatedData);
+      const result = await reviewCollection.updateOne(filter, updateQuery);
+      res.send(result);
+    });
+
     // delete review
     app.delete("/reviews/:id", verifyToken, async (req, res) => {
       const uid = req?.query.uid;
