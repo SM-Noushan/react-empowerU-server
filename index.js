@@ -384,6 +384,29 @@ async function run() {
       res.send(result);
     });
 
+    // add feedback
+    app.patch(
+      "/appliedScholarships/feedback/:id",
+      verifyToken,
+      async (req, res) => {
+        const uid = req?.query.uid;
+        if (uid !== req.decoded.uid)
+          return res.status(403).send({ message: "Forbidden Access" });
+        const id = req.params.id;
+        const data = req.body;
+        const filter = { _id: new ObjectId(id) };
+        const update = {
+          $set: data,
+        };
+        // const options = { upsert: true };
+        const result = await appliedScholarshipCollection.updateOne(
+          filter,
+          update
+        );
+        res.send(result);
+      }
+    );
+
     // cancel scholarship application
     app.delete("/appliedScholarships/:id", verifyToken, async (req, res) => {
       const uid = req?.query.uid;
