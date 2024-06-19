@@ -218,6 +218,54 @@ async function run() {
 
     // applied scholarships api
     // get applied scholarships
+    app.get(
+      "/appliedScholarships",
+      verifyToken,
+      verifyAdminOrMod,
+      async (req, res) => {
+        const uid = req?.query.uid;
+        if (uid !== req.decoded.uid)
+          return res.status(403).send({ message: "Forbidden Access" });
+        const result = await appliedScholarshipCollection
+          .aggregate([
+            {
+              $match: {
+                $expr: {
+                  $ne: [{ $toLower: "$cancelledByUser" }, "true"],
+                },
+              },
+            },
+            {
+              $lookup: {
+                from: "scholarships",
+                localField: "scholarshipId",
+                foreignField: "_id",
+                as: "additionalDetails",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 0,
+                      applicationFee: 1,
+                      serviceCharge: 1,
+                      scholarshipName: 1,
+                      universityName: 1,
+                      scholarshipCategory: 1,
+                      subjectCategory: 1,
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              $unwind: "$additionalDetails",
+            },
+          ])
+          .toArray();
+        res.send(result);
+      }
+    );
+
+    // get specific applied scholarships
     app.get("/appliedScholarships/:id", verifyToken, async (req, res) => {
       const uid = req?.params.id;
       if (uid !== req.decoded.uid)
@@ -246,6 +294,8 @@ async function run() {
                     universityCountry: 1,
                     applicationFee: 1,
                     serviceCharge: 1,
+                    universityName: 1,
+                    subjectCategory: 1,
                   },
                 },
               ],
