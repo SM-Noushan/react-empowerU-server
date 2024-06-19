@@ -388,6 +388,7 @@ async function run() {
     app.patch(
       "/appliedScholarships/feedback/:id",
       verifyToken,
+      verifyAdminOrMod,
       async (req, res) => {
         const uid = req?.query.uid;
         if (uid !== req.decoded.uid)
@@ -397,6 +398,30 @@ async function run() {
         const filter = { _id: new ObjectId(id) };
         const update = {
           $set: data,
+        };
+        // const options = { upsert: true };
+        const result = await appliedScholarshipCollection.updateOne(
+          filter,
+          update
+        );
+        res.send(result);
+      }
+    );
+
+    // reject application
+    app.patch(
+      "/appliedScholarships/reject/:id",
+      verifyToken,
+      verifyAdminOrMod,
+      async (req, res) => {
+        const uid = req?.query.uid;
+        if (uid !== req.decoded.uid)
+          return res.status(403).send({ message: "Forbidden Access" });
+        const id = req.params.id;
+        const data = req.body;
+        const filter = { _id: new ObjectId(id) };
+        const update = {
+          $set: { status: "Rejected" },
         };
         // const options = { upsert: true };
         const result = await appliedScholarshipCollection.updateOne(
