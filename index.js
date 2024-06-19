@@ -176,6 +176,29 @@ async function run() {
       }
     );
 
+    // update scholarship data
+    app.patch(
+      "/scholarships/:id",
+      verifyToken,
+      verifyAdminOrMod,
+      async (req, res) => {
+        const uid = req?.query.uid;
+        if (uid !== req.decoded.uid)
+          return res.status(403).send({ message: "Forbidden Access" });
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedData = req.body;
+        const updateQuery = {
+          $set: updatedData,
+        };
+        const result = await scholarshipCollection.updateOne(
+          filter,
+          updateQuery
+        );
+        res.send(result);
+      }
+    );
+
     // delete scholarship
     app.delete(
       "/scholarships/:id",
