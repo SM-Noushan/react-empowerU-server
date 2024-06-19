@@ -176,6 +176,23 @@ async function run() {
       }
     );
 
+    // delete scholarship
+    app.delete(
+      "/scholarships/:id",
+      verifyToken,
+      verifyAdminOrMod,
+      async (req, res) => {
+        const uid = req?.query.uid;
+        if (uid !== req.decoded.uid)
+          return res.status(403).send({ message: "Forbidden Access" });
+        const id = req.params.id;
+        const result = await scholarshipCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send(result);
+      }
+    );
+
     // applied scholarships api
     // get applied scholarships
     app.get("/appliedScholarships/:id", verifyToken, async (req, res) => {
