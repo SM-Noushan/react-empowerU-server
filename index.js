@@ -447,6 +447,40 @@ async function run() {
 
     // reviews apis
     // get my reviews
+    app.get("/reviews", verifyToken, verifyAdminOrMod, async (req, res) => {
+      const uid = req?.query.uid;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      const result = await reviewCollection
+        .aggregate([
+          {
+            $lookup: {
+              from: "scholarships",
+              localField: "scholarshipId",
+              foreignField: "_id",
+              as: "more",
+            },
+          },
+          {
+            $unwind: "$more",
+          },
+          {
+            $project: {
+              rating: 1,
+              reviewMessage: 1,
+              reviewDate: 1,
+              userName: 1,
+              userImage: 1,
+              "more.universityName": 1,
+              "more.subjectCategory": 1,
+            },
+          },
+        ])
+        .toArray();
+      res.send(result);
+    });
+
+    // get my reviews
     app.get("/reviews/:id", verifyToken, async (req, res) => {
       const uid = req?.params.id;
       if (uid !== req.decoded.uid)
@@ -515,6 +549,23 @@ async function run() {
       const result = await reviewCollection.updateOne(filter, updateQuery);
       res.send(result);
     });
+
+    // delete review (by admin or mod)
+    app.delete(
+      "/reviews/:id",
+      verifyToken,
+      verifyAdminOrMod,
+      async (req, res) => {
+        const uid = req?.query.uid;
+        if (uid !== req.decoded.uid)
+          return res.status(403).send({ message: "Forbidden Access" });
+        const id = req.params.id;
+        const result = await reviewCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send(result);
+      }
+    );
 
     // delete review
     app.delete("/reviews/:id", verifyToken, async (req, res) => {
