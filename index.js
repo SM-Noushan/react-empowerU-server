@@ -102,6 +102,21 @@ async function run() {
       res.send({ role });
     });
 
+    // store user data
+    app.post("/users", async (req, res) => {
+      const { name, email, role, image, uid } = req.body;
+      const filter = { uid };
+      const update = {
+        $setOnInsert: { uid, role },
+        $set: { name, email, image },
+      };
+      const options = { upsert: true };
+      const result = await userCollection.updateOne(filter, update, options);
+      if (result.upsertedCount > 0)
+        res.send({ message: "user added to database" });
+      else res.send({ message: "user already exists" });
+    });
+
     // scholarships api
     const scholarshipProjectionShared = {
       postedUserName: 0,
@@ -552,7 +567,7 @@ async function run() {
 
     // delete review (by admin or mod)
     app.delete(
-      "/reviews/:id",
+      "/reviews/adminOrMod/:id",
       verifyToken,
       verifyAdminOrMod,
       async (req, res) => {
