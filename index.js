@@ -475,9 +475,9 @@ async function run() {
                     $expr: {
                       $and: [
                         {
-                          $eq: ["$scholarshipId", "$$scholarshipID"],
-                          $eq: ["$userUID", "$$userUID"],
+                          $eq: ["$scholarshipId", "$$scholarshipId"],
                         },
+                        { $eq: ["$userUID", "$$userUID"] },
                       ],
                     },
                   },
