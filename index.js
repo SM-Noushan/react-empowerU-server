@@ -171,11 +171,17 @@ async function run() {
       postedUserEmail: 0,
       postedUserUID: 0,
     };
+
+    //get scholarships count
+    app.get("/count/scholarships", async (req, res) => {
+      const count = await scholarshipCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
+
     // get all scholarship data
     app.get("/scholarships", async (req, res) => {
-      const options = {
-        projection: scholarshipProjectionShared,
-      };
+      const page = parseInt(req.query?.page) || 1;
+      const limit = parseInt(req.query?.limit) || 6;
       const result = await scholarshipCollection
         .aggregate([
           {
@@ -196,6 +202,12 @@ async function run() {
           },
           {
             $project: scholarshipProjectionShared,
+          },
+          {
+            $skip: (page - 1) * limit,
+          },
+          {
+            $limit: limit,
           },
         ])
         .toArray();
