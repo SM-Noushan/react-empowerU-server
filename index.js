@@ -351,40 +351,72 @@ async function run() {
         const uid = req?.query.uid;
         if (uid !== req.decoded.uid)
           return res.status(403).send({ message: "Forbidden Access" });
-        const result = await appliedScholarshipCollection
-          .aggregate([
-            {
-              $match: {
-                $expr: {
-                  $ne: [{ $toLower: "$cancelledByUser" }, "true"],
+        const sort = req.query?.sort;
+        let sortOptions = {};
+        if (sort === "asc_ad") sortOptions = { appliedDate: 1 };
+        else if (sort === "des_ad") sortOptions = { appliedDate: -1 };
+        else if (sort === "des_dl") sortOptions = { deadlineDate: -1 };
+        else if (sort === "asc_dl") sortOptions = { deadlineDate: 1 };
+        else sortOptions = {};
+        const pipeline = [
+          {
+            $match: {
+              $expr: {
+                $ne: [{ $toLower: "$cancelledByUser" }, "true"],
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: "scholarships",
+              localField: "scholarshipId",
+              foreignField: "_id",
+              as: "additionalDetails",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 0,
+                    applicationFee: 1,
+                    serviceCharge: 1,
+                    scholarshipName: 1,
+                    universityName: 1,
+                    scholarshipCategory: 1,
+                    subjectCategory: 1,
+                    applicationDeadline: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $unwind: "$additionalDetails",
+          },
+          {
+            $addFields: {
+              appliedDate: {
+                $dateFromString: {
+                  dateString: "$applyDate",
+                  format: "%d %B, %Y",
+                },
+              },
+              deadlineDate: {
+                $dateFromString: {
+                  dateString: "$additionalDetails.applicationDeadline",
+                  format: "%d %B, %Y",
                 },
               },
             },
-            {
-              $lookup: {
-                from: "scholarships",
-                localField: "scholarshipId",
-                foreignField: "_id",
-                as: "additionalDetails",
-                pipeline: [
-                  {
-                    $project: {
-                      _id: 0,
-                      applicationFee: 1,
-                      serviceCharge: 1,
-                      scholarshipName: 1,
-                      universityName: 1,
-                      scholarshipCategory: 1,
-                      subjectCategory: 1,
-                    },
-                  },
-                ],
-              },
-            },
-            {
-              $unwind: "$additionalDetails",
-            },
-          ])
+          },
+        ];
+
+        if (Object.keys(sortOptions).length > 0) {
+          pipeline.push({
+            $sort: sortOptions,
+          });
+        }
+        console.log(sortOptions);
+        const result = await appliedScholarshipCollection
+          .aggregate(pipeline)
           .toArray();
         res.send(result);
       }
