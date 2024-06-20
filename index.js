@@ -126,6 +126,21 @@ async function run() {
       else res.send({ message: "user already exists" });
     });
 
+    // change user role
+    app.patch("/users/:id", verifyToken, verifyAdminOrMod, async (req, res) => {
+      const uid = req?.query.uid;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const data = req.body;
+      const update = {
+        $set: data,
+      };
+      const result = await userCollection.updateOne(filter, update);
+      res.send(result);
+    });
+
     // delete review (by admin or mod)
     app.delete(
       "/users/:id",
