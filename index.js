@@ -102,6 +102,15 @@ async function run() {
       res.send({ role });
     });
 
+    // get user data
+    app.get("/users", verifyToken, verifyAdminOrMod, async (req, res) => {
+      const uid = req?.query.uid;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
     // store user data
     app.post("/users", async (req, res) => {
       const { name, email, role, image, uid } = req.body;
