@@ -361,9 +361,14 @@ async function run() {
         const pipeline = [
           {
             $match: {
-              $expr: {
-                $ne: [{ $toLower: "$cancelledByUser" }, "true"],
-              },
+              $or: [
+                { cancelledByUser: { $exists: false } },
+                {
+                  $expr: {
+                    $ne: [{ $toLower: "$cancelledByUser" }, "true"],
+                  },
+                },
+              ],
             },
           },
           {
@@ -414,7 +419,6 @@ async function run() {
             $sort: sortOptions,
           });
         }
-        console.log(sortOptions);
         const result = await appliedScholarshipCollection
           .aggregate(pipeline)
           .toArray();
@@ -464,8 +468,21 @@ async function run() {
           {
             $lookup: {
               from: "reviews",
-              localField: "scholarshipId",
-              foreignField: "scholarshipId",
+              let: { scholarshipId: "$scholarshipId", userUID: "$userUID" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        {
+                          $eq: ["$scholarshipId", "$$scholarshipID"],
+                          $eq: ["$userUID", "$$userUID"],
+                        },
+                      ],
+                    },
+                  },
+                },
+              ],
               as: "review",
             },
           },
@@ -760,6 +777,58 @@ async function run() {
       payment.scholarshipId = new ObjectId(payment.scholarshipId);
       const result = await paymentCollection.insertOne(payment);
       res.send(result);
+    });
+
+    // statistics api
+    // get statistics
+    app.get("/statistics", verifyToken, verifyAdminOrMod, async (req, res) => {
+      const uid = req?.query.uid;
+      if (uid !== req.decoded.uid)
+        return res.status(403).send({ message: "Forbidden Access" });
+      // available scholarships
+      const mastersCount = await scholarshipCollection.countDocuments({
+        degree: "Masters",
+      });
+      const bachelorCount = await scholarshipCollection.countDocuments({
+        degree: "Bachelor",
+      });
+      const diplomaCount = await scholarshipCollection.countDocuments({
+        degree: "Diploma",
+      });
+      // applied scholarships
+      const appliedMastersCount =
+        await appliedScholarshipCollection.countDocuments({
+          applicantDegree: "Masters",
+          cancelledByUser: { $ne: "true" },
+        });
+      const appliedBachelorCount =
+        await appliedScholarshipCollection.countDocuments({
+          applicantDegree: "Bachelor",
+          cancelledByUser: { $ne: "true" },
+        });
+      const appliedDiplomaCount =
+        await appliedScholarshipCollection.countDocuments({
+          applicantDegree: "Diploma",
+          cancelledByUser: { $ne: "true" },
+        });
+      const data = [
+        {
+          name: "Masters",
+          "Total Scholarships": mastersCount,
+          "Applied Scholarships": appliedMastersCount,
+        },
+        {
+          name: "Bachelor",
+          "Total Scholarships": bachelorCount,
+          "Applied Scholarships": appliedBachelorCount,
+        },
+        {
+          name: "Diploma",
+          "Total Scholarships": diplomaCount,
+          "Applied Scholarships": appliedDiplomaCount,
+        },
+      ];
+      res.send(data);
     });
   } finally {
     //   catch (e) {
