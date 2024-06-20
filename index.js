@@ -126,6 +126,23 @@ async function run() {
       else res.send({ message: "user already exists" });
     });
 
+    // delete review (by admin or mod)
+    app.delete(
+      "/users/:id",
+      verifyToken,
+      verifyAdminOrMod,
+      async (req, res) => {
+        const uid = req?.query.uid;
+        if (uid !== req.decoded.uid)
+          return res.status(403).send({ message: "Forbidden Access" });
+        const id = req.params.id;
+        const result = await userCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send(result);
+      }
+    );
+
     // scholarships api
     const scholarshipProjectionShared = {
       postedUserName: 0,
@@ -591,7 +608,7 @@ async function run() {
       }
     );
 
-    // delete review
+    // delete review (by user)
     app.delete("/reviews/:id", verifyToken, async (req, res) => {
       const uid = req?.query.uid;
       if (uid !== req.decoded.uid)
