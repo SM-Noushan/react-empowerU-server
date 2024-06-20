@@ -620,7 +620,7 @@ async function run() {
     });
 
     // reviews apis
-    // get my reviews
+    // get all reviews
     app.get("/reviews", verifyToken, verifyAdminOrMod, async (req, res) => {
       const uid = req?.query.uid;
       if (uid !== req.decoded.uid)
@@ -654,7 +654,7 @@ async function run() {
       res.send(result);
     });
 
-    // get my reviews
+    // get user reviews
     app.get("/reviews/:id", verifyToken, async (req, res) => {
       const uid = req?.params.id;
       if (uid !== req.decoded.uid)
@@ -692,6 +692,56 @@ async function run() {
               reviewMessage: 1,
               reviewDate: 1,
               scholarshipDetails: 1,
+            },
+          },
+        ])
+        .toArray();
+      res.send(result);
+    });
+
+    // get top reviews
+    app.get("/featured/reviews", async (req, res) => {
+      const result = await reviewCollection
+        .aggregate([
+          {
+            $addFields: {
+              date: {
+                $dateFromString: {
+                  dateString: "$reviewDate",
+                  format: "%d %B, %Y",
+                },
+              },
+            },
+          },
+          {
+            $sort: {
+              rating: -1,
+              date: -1,
+            },
+          },
+          {
+            $limit: 3,
+          },
+          {
+            $lookup: {
+              from: "scholarships",
+              localField: "scholarshipId",
+              foreignField: "_id",
+              as: "more",
+            },
+          },
+          {
+            $unwind: "$more",
+          },
+          {
+            $project: {
+              rating: 1,
+              reviewMessage: 1,
+              reviewDate: 1,
+              userName: 1,
+              userImage: 1,
+              "more.universityName": 1,
+              "more.subjectCategory": 1,
             },
           },
         ])
