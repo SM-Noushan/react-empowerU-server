@@ -107,7 +107,14 @@ async function run() {
       const uid = req?.query.uid;
       if (uid !== req.decoded.uid)
         return res.status(403).send({ message: "Forbidden Access" });
-      const result = await userCollection.find().toArray();
+      const role = req?.query?.role;
+      let sortBy = {};
+      let query = {};
+      if (role && role !== "default") {
+        query = { role };
+        sortBy = { role: 1 };
+      }
+      const result = await userCollection.find(query).sort(sortBy).toArray();
       res.send(result);
     });
 
