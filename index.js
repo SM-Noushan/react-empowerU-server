@@ -202,6 +202,56 @@ async function run() {
       res.send(result);
     });
 
+    // get top scholarship data
+    app.get("/scholarships/top", async (req, res) => {
+      const options = {
+        projection: scholarshipProjectionShared,
+      };
+      const result = await scholarshipCollection
+        .aggregate([
+          {
+            $addFields: {
+              isoPostDate: {
+                $dateFromString: {
+                  dateString: "$scholarshipPostDate",
+                  format: "%d %B, %Y",
+                },
+              },
+            },
+          },
+          {
+            $sort: {
+              applicationFee: 1,
+              isoPostDate: -1,
+            },
+          },
+          {
+            $limit: 6,
+          },
+          {
+            $lookup: {
+              from: "reviews",
+              localField: "_id",
+              foreignField: "scholarshipId",
+              as: "reviews",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 0,
+                    rating: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $project: { ...scholarshipProjectionShared, isoPostDate: 0 },
+          },
+        ])
+        .toArray();
+      res.send(result);
+    });
+
     // get specific scholarship data
     app.get("/scholarship/:id", async (req, res) => {
       const id = req?.params.id;
