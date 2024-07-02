@@ -1,3 +1,3 @@
 # EmpowerU - Server Side
 
-[Clinet-Repo](https://github.com/SM-Noushan/react-empowerU-client)
+[Client-Repo](https://github.com/SM-Noushan/react-empowerU-client)
